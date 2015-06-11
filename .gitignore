@@ -1,0 +1,6 @@
+ssl_secrets.json
+*~
+*.swp
+*.swo
+release/
+config

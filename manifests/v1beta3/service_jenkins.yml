@@ -1,0 +1,21 @@
+kind: Service
+apiVersion: v1beta3
+metadata:
+  name: jenkins
+  labels:
+    name: jenkins
+    role: frontend
+spec:
+  ports:
+    - name: ui
+      protocol: TCP
+      port: 8080
+      targetPort: jenkins-http
+    - name: discovery
+      protocol: TCP
+      port: 50000
+      targetPort: jenkins-discovery
+  selector:
+    name: jenkins
+    role: leader
+  createExternalLoadBalancer: false

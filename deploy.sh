@@ -20,23 +20,40 @@ function error_exit
 }
 
 # Check for cluster name as first (and only) arg
-CLUSTER_NAME=${1-imager}
-NUM_NODES=2
-MACHINE_TYPE=n1-highmem-2
-ZONE=europe-west1-b
+. ./deployment_config.sh
+. ./cluster_secrets.sh
+
+if [[ -z ${CLUSTER_ADMIN} || -z  ${CLUSTER_PASSWORD} ]]
+then
+  echo "Generate cluster_secrets.sh from cluster_secrets.template.sh"
+  exit 1
+fi
+if [[ ${CLUSTER_ADMIN} == todefine || ${CLUSTER_PASSWORD} == todefine ]]
+then
+  echo "Change user/password"
+  exit 1
+fi
 
 echo -n "* Generating a temporary SSH key pair..."
 ssh-keygen -f ~/.ssh/google_compute_engine -t rsa -N '' || error_exit "Error creating key pair"
 echo "done."
 
+
+
+
 echo -n "* Creating Google Container Engine cluster \"${CLUSTER_NAME}\"..."
 # Create cluster
 gcloud alpha container clusters create ${CLUSTER_NAME} \
+  --cluster-api-version ${API_VERSION} \
   --num-nodes ${NUM_NODES} \
   --machine-type ${MACHINE_TYPE} \
   --scopes "https://www.googleapis.com/auth/devstorage.full_control,https://www.googleapis.com/auth/projecthosting,https://www.googleapis.com/auth/monitoring,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/compute,https://www.googleapis.com/auth/cloud-platform" \
   --zone ${ZONE} >/dev/null || error_exit "Error creating Google Container Engine cluster"
 echo "done."
+
+
+
+
 
 echo -n "* Enabling privileged pods in cluster master..."
 # Allow privileged pods
@@ -44,6 +61,10 @@ gcloud compute ssh k8s-${CLUSTER_NAME}-master \
   --zone ${ZONE} \
   --command "sudo sed -i -- 's/--allow_privileged=False/--allow_privileged=true/g' /etc/kubernetes/manifests/kube-apiserver.manifest; sudo docker ps | grep /kube-apiserver | cut -d ' ' -f 1 | xargs sudo docker kill" &>/dev/null || error_exit "Error enabling privileged pods in cluster master"
 echo "done."
+
+
+
+
 
 echo -n "* Enabling privileged pods in cluster nodes..."
 # Enable allow_privileged on nodes
@@ -54,9 +75,16 @@ gcloud compute instances list \
   | xargs -L 1 -I '{}' gcloud --user-output-enabled=false compute ssh {} --zone ${ZONE} --command "sudo sed -i -- 's/--allow_privileged=False/--allow_privileged=true/g' /etc/default/kubelet; sudo /etc/init.d/kubelet restart" &>/dev/null || error_exit "Error enabling privileged pods in cluster nodes"
 echo "done."
 
+
+
+
+
 echo -n "* Deleting temporary SSH key pair..."
 rm ~/.ssh/google_compute_engine*
 echo "done."
+
+
+
 
 echo -n "* Creating firewall rules..."
 # Allow kubernetes nodes to communicate between eachother on TCP 50000 and 8080
@@ -65,22 +93,32 @@ gcloud compute firewall-rules create ${CLUSTER_NAME}-jenkins-swarm-internal --al
 gcloud compute firewall-rules create ${CLUSTER_NAME}-jenkins-web-public --allow TCP:80,TCP:443 --source-ranges 0.0.0.0/0 --target-tags k8s-${CLUSTER_NAME}-node &>/dev/null || error_exit "Error creating public firewall rule"
 echo "done."
 
+
+
+
 # Make kubectl use new clusterc
 echo -n "* Configuring kubectl to use new gke_$(gcloud config list | grep project | cut -f 3 -d' ')_${ZONE}_${CLUSTER_NAME} cluster..."
 kubectl config use-context gke_$(gcloud config list | grep project | cut -f 3 -d' ')_${ZONE}_${CLUSTER_NAME} >/dev/null || error_exit "Error configuring kubectl"
 echo "done."
 
+
+
+
 # Wait for API server to become avilable
 for i in {1..5}; do kubectl get pods &>/dev/null && break || sleep 2; done
 
+
+
+
 # Deploy secrets, replication controllers, and services
 echo -n "* Deploying services, controllers, and secrets to Google Container Engine..."
-kubectl create -f ssl_secrets.json >/dev/null || error_exit "Error deploying ssl_secrets.json"
-kubectl create -f service_ssl_proxy.json >/dev/null || error_exit "Error deploying service_ssl_proxy.json"
-kubectl create -f service_jenkins.json >/dev/null || error_exit "Error deploying service_jenkins.json"
-kubectl create -f ssl_proxy.json >/dev/null || error_exit "Error deploying ssl_proxy.json"
-kubectl create -f leader.json >/dev/null || error_exit "Error deploying leader.json"
-kubectl create -f agent.json >/dev/null || error_exit "Error deploying agent.json"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/secret_ssl.yml >/dev/null || error_exit "Error deploying secret_ssl.json"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/secret_maven_settings.yml >/dev/null || error_exit "Error deploying secret_maven_settings.json"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/service_ssl_proxy.yml >/dev/null || error_exit "Error deploying service_ssl_proxy.json"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/service_jenkins.yml >/dev/null || error_exit "Error deploying service_jenkins.json"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/rc_ssl_proxy.yml >/dev/null || error_exit "Error deploying rc_ssl_proxy.json"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/rc_leader.yml >/dev/null || error_exit "Error deploying rc_leader.json"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/rc_agent.yml >/dev/null || error_exit "Error deploying rc_agent.json"
 echo "done."
 
 echo "All resources deployed. Run 'echo http://\$(kubectl describe service/nginx-ssl-proxy 2>/dev/null | grep 'Public\ IPs' | cut -f3)' to find your server's address, then give it a few minutes before trying to connect."

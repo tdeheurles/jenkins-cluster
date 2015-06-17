@@ -1,0 +1,2 @@
+CLUSTER_ADMIN="todefine"
+CLUSTER_PASSWORD="todefine"

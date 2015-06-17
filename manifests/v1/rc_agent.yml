@@ -1,0 +1,49 @@
+kind: ReplicationController
+apiVersion: v1
+metadata:
+  name: jenkins-agent
+  creationTimestamp: null
+  labels:
+    labels: gcp-packer
+    name: jenkins
+    role: agent
+spec:
+  replicas: 1
+  selector:
+    labels: gcp-packer
+    name: jenkins
+    role: agent
+  template:
+    metadata:
+      name: jenkins-agent
+      creationTimestamp: null
+      labels:
+        labels: gcp-packer
+        name: jenkins
+        role: agent
+    spec:
+      containers:
+        - name: jenkins-agent
+          image: 'gcr.io/epsilon-jenkins/jenkins-agent:latest'
+          command:
+            - sh
+            - '-c'
+            - '/usr/local/bin/jenkins-docker-supervisor.sh -master http://$JENKINS_SERVICE_HOST:$JENKINS_SERVICE_PORT_UI -tunnel $JENKINS_SERVICE_HOST:$JENKINS_SERVICE_PORT_DISCOVERY -executors 1 -labels gcp-packer'
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          imagePullPolicy: Always
+          securityContext:
+            capabilities: {}
+            privileged: true
+          volumeMounts:
+            - name: settings
+              mountPath: /home/jenkins-agent/.m2/
+              readOnly: false
+      volumes:
+        - name: settings
+          secret:
+            secretName: maven-settings
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+status:
+  replicas: 0

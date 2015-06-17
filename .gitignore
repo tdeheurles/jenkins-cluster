@@ -1,6 +1,12 @@
-ssl_secrets.json
 *~
 *.swp
 *.swo
 release/
 config
+
+secret_ssl.json
+secret_ssl.yml
+secret_maven_settings.json
+secret_maven_settings.yml
+log_deployments
+cluster_secrets.sh

@@ -2,7 +2,7 @@ kind: ReplicationController
 apiVersion: v1
 metadata:
   name: nginx-ssl-proxy
-  creationTimestamp: null
+  #creationTimestamp: null
   labels:
     name: nginx
     role: ssl-proxy
@@ -14,7 +14,7 @@ spec:
   template:
     metadata:
       name: nginx-ssl-proxy
-      creationTimestamp: null
+      #creationTimestamp: null
       labels:
         name: nginx
         role: ssl-proxy
@@ -54,5 +54,5 @@ spec:
           imagePullPolicy: Always
       restartPolicy: Always
       dnsPolicy: ClusterFirst
-status:
-  replicas: 0
+# status:
+#   replicas: 0

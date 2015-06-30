@@ -2,7 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: jenkins
-  creationTimestamp: null
+  #creationTimestamp: null
   labels:
     name: jenkins
     role: frontend
@@ -12,12 +12,12 @@ spec:
       protocol: TCP
       port: 8080
       targetPort: jenkins-http
-      nodePort: 0
+      #nodePort: 0
     - name: discovery
       protocol: TCP
       port: 50000
       targetPort: jenkins-discovery
-      nodePort: 0
+      #nodePort: 0
   selector:
     name: jenkins
     role: leader

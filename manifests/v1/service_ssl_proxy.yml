@@ -2,7 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: nginx-ssl-proxy
-  creationTimestamp: null
+  #creationTimestamp: null
   labels:
     name: nginx
     role: ssl-proxy
@@ -12,12 +12,12 @@ spec:
       protocol: TCP
       port: 443
       targetPort: nginx-ssl-proxy-https
-      nodePort: 0
+      #nodePort: 0
     - name: http
       protocol: TCP
       port: 80
       targetPort: nginx-ssl-proxy-http
-      nodePort: 0
+      #nodePort: 0
   selector:
     name: nginx
     role: ssl-proxy

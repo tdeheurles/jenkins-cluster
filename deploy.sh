@@ -47,7 +47,7 @@ gcloud alpha container clusters create ${CLUSTER_NAME} \
   --cluster-api-version ${API_VERSION} \
   --num-nodes ${NUM_NODES} \
   --machine-type ${MACHINE_TYPE} \
-  --scopes "https://www.googleapis.com/auth/devstorage.full_control,https://www.googleapis.com/auth/projecthosting,https://www.googleapis.com/auth/monitoring,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/compute,https://www.googleapis.com/auth/cloud-platform" \
+  --scopes "https://www.googleapis.com/auth/devstorage.full_control,https://www.googleapis.com/auth/monitoring,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/compute,https://www.googleapis.com/auth/cloud-platform" \
   --zone ${ZONE} >/dev/null || error_exit "Error creating Google Container Engine cluster"
 echo "done."
 
@@ -59,9 +59,8 @@ echo -n "* Enabling privileged pods in cluster master..."
 # Allow privileged pods
 gcloud compute ssh k8s-${CLUSTER_NAME}-master \
   --zone ${ZONE} \
-  --command "sudo sed -i -- 's/--allow_privileged=False/--allow_privileged=true/g' /etc/kubernetes/manifests/kube-apiserver.manifest; sudo docker ps | grep /kube-apiserver | cut -d ' ' -f 1 | xargs sudo docker kill" &>/dev/null || error_exit "Error enabling privileged pods in cluster master"
+  --command "sudo sed -i -- 's/--allow_privileged=False/--allow_privileged=true/g' /etc/kubernetes/manifests/kube-apiserver.manifest; sudo docker ps | grep /kube-apiserver | cut -d ' ' -f 1 | xargs sudo docker kill" #&>/dev/null || error_exit "Error enabling privileged pods in cluster master"
 echo "done."
-
 
 
 
@@ -69,7 +68,7 @@ echo "done."
 echo -n "* Enabling privileged pods in cluster nodes..."
 # Enable allow_privileged on nodes
 gcloud compute instances list \
-  -r "^k8s-${CLUSTER_NAME}.*node.*$" \
+  -r "^gke-${CLUSTER_NAME}.*node.*$" \
   | tail -n +2 \
   | cut -f1 -d' ' \
   | xargs -L 1 -I '{}' gcloud --user-output-enabled=false compute ssh {} --zone ${ZONE} --command "sudo sed -i -- 's/--allow_privileged=False/--allow_privileged=true/g' /etc/default/kubelet; sudo /etc/init.d/kubelet restart" &>/dev/null || error_exit "Error enabling privileged pods in cluster nodes"
@@ -112,13 +111,13 @@ for i in {1..5}; do kubectl get pods &>/dev/null && break || sleep 2; done
 
 # Deploy secrets, replication controllers, and services
 echo -n "* Deploying services, controllers, and secrets to Google Container Engine..."
-kubectl create -f ./manifests/${MANIFEST_API_VERSION}/secret_ssl.yml >/dev/null || error_exit "Error deploying secret_ssl.json"
-kubectl create -f ./manifests/${MANIFEST_API_VERSION}/secret_maven_settings.yml >/dev/null || error_exit "Error deploying secret_maven_settings.json"
-kubectl create -f ./manifests/${MANIFEST_API_VERSION}/service_ssl_proxy.yml >/dev/null || error_exit "Error deploying service_ssl_proxy.json"
-kubectl create -f ./manifests/${MANIFEST_API_VERSION}/service_jenkins.yml >/dev/null || error_exit "Error deploying service_jenkins.json"
-kubectl create -f ./manifests/${MANIFEST_API_VERSION}/rc_ssl_proxy.yml >/dev/null || error_exit "Error deploying rc_ssl_proxy.json"
-kubectl create -f ./manifests/${MANIFEST_API_VERSION}/rc_leader.yml >/dev/null || error_exit "Error deploying rc_leader.json"
-kubectl create -f ./manifests/${MANIFEST_API_VERSION}/rc_agent.yml >/dev/null || error_exit "Error deploying rc_agent.json"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/secret_ssl.yml >/dev/null || error_exit "Error deploying secret_ssl.yml"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/secret_maven_settings.yml >/dev/null || error_exit "Error deploying secret_maven_settings.yml"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/service_ssl_proxy.yml >/dev/null || error_exit "Error deploying service_ssl_proxy.yml"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/service_jenkins.yml >/dev/null || error_exit "Error deploying service_jenkins.yml"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/rc_ssl_proxy.yml >/dev/null || error_exit "Error deploying rc_ssl_proxy.yml"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/rc_leader.yml >/dev/null || error_exit "Error deploying rc_leader.yml"
+kubectl create -f ./manifests/${MANIFEST_API_VERSION}/rc_agent.yml >/dev/null || error_exit "Error deploying rc_agent.yml"
 echo "done."
 
-echo "All resources deployed. Run 'echo http://\$(kubectl describe service/nginx-ssl-proxy 2>/dev/null | grep 'Public\ IPs' | cut -f3)' to find your server's address, then give it a few minutes before trying to connect."
+echo "All resources deployed. Run 'echo http://\$(kubectl describe service/nginx-ssl-proxy 2>/dev/null | grep 'LoadBalancer\ Ingress' | cut -f2)' to find your server's address, then give it a few minutes before trying to connect."

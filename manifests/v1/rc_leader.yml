@@ -2,7 +2,7 @@ kind: ReplicationController
 apiVersion: v1
 metadata:
   name: jenkins-leader
-  creationTimestamp: null
+  #creationTimestamp: null
   labels:
     name: jenkins
     role: leader
@@ -14,7 +14,7 @@ spec:
   template:
     metadata:
       name: jenkins-leader
-      creationTimestamp: null
+      #creationTimestamp: null
       labels:
         name: jenkins
         role: leader
@@ -39,5 +39,5 @@ spec:
           imagePullPolicy: Always
       restartPolicy: Always
       dnsPolicy: ClusterFirst
-status:
-  replicas: 0
+# status:
+#   replicas: 0

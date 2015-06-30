@@ -2,7 +2,7 @@ kind: ReplicationController
 apiVersion: v1
 metadata:
   name: jenkins-agent
-  creationTimestamp: null
+  #creationTimestamp: null
   labels:
     labels: gcp-packer
     name: jenkins
@@ -16,7 +16,7 @@ spec:
   template:
     metadata:
       name: jenkins-agent
-      creationTimestamp: null
+      #creationTimestamp: null
       labels:
         labels: gcp-packer
         name: jenkins
@@ -32,9 +32,9 @@ spec:
           resources: {}
           terminationMessagePath: /dev/termination-log
           imagePullPolicy: Always
-          securityContext:
-            capabilities: {}
-            privileged: true
+          # securityContext:
+          #   #capabilities: {}
+          #   privileged: true
           volumeMounts:
             - name: settings
               mountPath: /home/jenkins-agent/.m2/
@@ -45,5 +45,5 @@ spec:
             secretName: maven-settings
       restartPolicy: Always
       dnsPolicy: ClusterFirst
-status:
-  replicas: 0
+# status:
+#   replicas: 0
